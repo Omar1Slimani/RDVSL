@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDVSL</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="icon.png" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gestion des Tâches Client</h1>
+            <div class="search-add-container">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Rechercher ND..." autocomplete="off">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="add-client-form">
+                    <input type="text" id="newClientND" placeholder="Ex: 0539513465">
+                    <button class="btn btn-primary" onclick="addClient()">Créer</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="clients-list" id="clientsList"></div>
+    </div>
+
+    <div class="save-indicator" id="saveIndicator">✓ Sauvegardé</div>
+
+   <script src="script.js"></script>
+</body>
+</html>
