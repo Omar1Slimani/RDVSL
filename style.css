@@ -116,9 +116,10 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
+        /* ألوان رأس العميل - سيتم التحكم بها عبر JavaScript */
         .client-header {
             padding: 15px;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #ef7b05 0%, #2a5298 100%);
             color: white;
             display: flex;
             justify-content: space-between;
@@ -127,14 +128,87 @@
             transition: all 0.3s;
         }
 
+        .client-header.ivr-ok {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+        }
+
+        .client-header.ivr-inj {
+            background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+            color: #333;
+        }
+
+        .client-header.ivr-rdv {
+            background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+        }
+
+        .client-header.pdya-close {
+            background: linear-gradient(135deg, #f44336 0%, #b71c1c 100%);
+        }
+
+        .client-header.pdya-open {
+            background: linear-gradient(135deg, #9e9e9e 0%, #616161 100%);
+        }
+
         .client-header:hover {
-            background: linear-gradient(135deg, #163055 0%, #1e3c72 100%);
+            opacity: 0.9;
+        }
+
+        .client-info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .client-nd {
             font-size: 20px;
             font-weight: bold;
+            margin-bottom: 5px;
         }
+
+        .client-basic-info {
+            display: flex;
+            gap: 10px;
+            font-size: 14px;
+            flex-wrap: wrap;
+        }
+
+        .service-badge, .type-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        /* ألوان Service */
+        .service-NON { background-color: #cccccc; color: #333; }
+        .service-MARMAT { background-color: #ff8c42; color: white; }
+        .service-WANA { background-color: #7b00ff; color: white; }
+        .service-IAM { background-color: #ff0000; color: white; }
+
+        /* ألوان Type */
+        .type-NON { background-color: #e0e0e0; color: #333; }
+        .type-GPON { background-color: #2196F3; color: white; }
+        .type-RTC { background-color: #4CAF50; color: white; }
+        .type-VOIP { background-color: #9C27B0; color: white; }
+
+        /* ألوان خيارات القوائم المنسدلة */
+        select option[value="NON"] { background-color: #cccccc; }
+        select option[value="MARMAT"] { background-color: #ff8c42; color: white; }
+        select option[value="WANA"] { background-color: #7b00ff; color: white; }
+        select option[value="IAM"] { background-color: #ff0000; color: white; }
+        
+        select option[value="UP"] { background-color: #4CAF50; color: white; }
+        select option[value="Down"] { background-color: #ff0000; color: white; }
+
+        /* تلوين خانات الخيارات في النموذج */
+        #service-NON { background-color: #cccccc; color: #333; }
+        #service-MARMAT { background-color: #ff8c42; color: white; }
+        #service-WANA { background-color: #7b00ff; color: white; }
+        #service-IAM { background-color: #ff0000; color: white; }
+        
+        #acs-UP { background-color: #4CAF50; color: white; }
+        #acs-Down { background-color: #ff0000; color: white; }
 
         .client-actions {
             display: flex;
@@ -202,6 +276,13 @@
         .form-group input:focus {
             outline: none;
             border-color: #ff8c42;
+        }
+
+        /* تلوين خانات الخيارات في النموذج */
+        .colored-select {
+            color: white;
+            font-weight: 600;
+            text-align: center;
         }
 
         .inline-group {
@@ -344,6 +425,16 @@
 
             .copy-btn {
                 width: auto;
+                margin-top: 0;
+            }
+            
+            .client-info-container {
+                flex-direction: row;
+                align-items: center;
+                gap: 20px;
+            }
+            
+            .client-basic-info {
                 margin-top: 0;
             }
         }

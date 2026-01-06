@@ -1,7 +1,6 @@
-
+        
         let clients = {};
 
-        // Charger les données du localStorage
         function loadClients() {
             const saved = localStorage.getItem('clientsData');
             if (saved) {
@@ -10,7 +9,6 @@
             }
         }
 
-        // Sauvegarder dans localStorage
         function saveClients() {
             localStorage.setItem('clientsData', JSON.stringify(clients));
             showSaveIndicator();
@@ -24,7 +22,6 @@
             }, 2000);
         }
 
-        // Ajouter un nouveau client
         function addClient() {
             const nd = document.getElementById('newClientND').value.trim();
             if (!nd) {
@@ -38,6 +35,9 @@
 
             clients[nd] = {
                 nd: nd,
+                nom: '',
+                service: 'NON',
+                type: 'NON',
                 ivr: 'NON',
                 injTime: '',
                 callTime: '',
@@ -56,7 +56,6 @@
             document.getElementById('newClientND').value = '';
         }
 
-        // Supprimer un client
         function deleteClient(nd) {
             if (confirm(`Voulez-vous vraiment supprimer le client ${nd} ?`)) {
                 delete clients[nd];
@@ -65,13 +64,11 @@
             }
         }
 
-        // Toggle client details
         function toggleClient(nd) {
             const details = document.getElementById(`details-${nd}`);
             details.classList.toggle('open');
         }
 
-        // Calculer l'heure d'appel (temps original + 1 heure)
         function calculateCallTime(nd) {
             const injTime = document.getElementById(`injTime-${nd}`).value;
             if (injTime) {
@@ -90,7 +87,6 @@
             saveClients();
         }
 
-        // Copier le numéro de téléphone
         function copyPhone(nd) {
             const phone = document.getElementById(`contact-${nd}`).value;
             if (phone) {
@@ -100,33 +96,135 @@
             }
         }
 
-        // Mettre à jour les données du client
         function updateClient(nd, field, value) {
             clients[nd][field] = value;
             saveClients();
+            
+            // تحديث لون رأس العميل عند تغيير IVR أو PDYA
+            if (field === 'ivr' || field === 'pdya') {
+                updateClientHeaderColor(nd);
+            }
+            
+            // تحديث تلوين خانة الخيار عند التغيير
+            if (field === 'service' || field === 'acs') {
+                updateSelectColor(nd, field, value);
+            }
         }
 
-        // Recherche
+        // دالة لتحديث لون رأس العميل بناءً على IVR و PDYA
+        function updateClientHeaderColor(nd) {
+            const header = document.querySelector(`#header-${nd}`);
+            if (!header) return;
+            
+            const client = clients[nd];
+            
+            // إزالة جميع الفئات المتعلقة بالألوان
+            header.classList.remove('ivr-ok', 'ivr-inj', 'ivr-rdv', 'pdya-close', 'pdya-open');
+            
+            // تطبيق ألوان IVR أولاً
+            if (client.ivr === 'OK') {
+                header.classList.add('ivr-ok');
+            } else if (client.ivr === 'inj') {
+                header.classList.add('ivr-inj');
+            } else if (client.ivr === 'RDV') {
+                header.classList.add('ivr-rdv');
+            }
+            
+            // تطبيق ألوان PDYA (تتغلب على ألوان IVR)
+            if (client.pdya === 'Close') {
+                header.classList.add('pdya-close');
+            } else if (client.pdya === 'Open') {
+                header.classList.add('pdya-open');
+            }
+        }
+
+        // دالة لتحديث تلوين خانة الخيار
+        function updateSelectColor(nd, field, value) {
+            const selectElement = document.getElementById(`${field}-${nd}`);
+            if (!selectElement) return;
+            
+            // إزالة جميع فئات الألوان
+            selectElement.classList.remove('colored-select');
+            selectElement.style.backgroundColor = '';
+            selectElement.style.color = '';
+            
+            // تطبيق اللون المناسب بناءً على القيمة
+            if (field === 'service') {
+                switch(value) {
+                    case 'NON':
+                        selectElement.style.backgroundColor = '#cccccc';
+                        selectElement.style.color = '#333';
+                        break;
+                    case 'MARMAT':
+                        selectElement.style.backgroundColor = '#ff8c42';
+                        selectElement.style.color = 'white';
+                        break;
+                    case 'WANA':
+                        selectElement.style.backgroundColor = '#7b00ff';
+                        selectElement.style.color = 'white';
+                        break;
+                    case 'IAM':
+                        selectElement.style.backgroundColor = '#ff0000';
+                        selectElement.style.color = 'white';
+                        break;
+                }
+            } else if (field === 'acs') {
+                switch(value) {
+                    case 'UP':
+                        selectElement.style.backgroundColor = '#4CAF50';
+                        selectElement.style.color = 'white';
+                        break;
+                    case 'Down':
+                        selectElement.style.backgroundColor = '#ff0000';
+                        selectElement.style.color = 'white';
+                        break;
+                    default:
+                        selectElement.style.backgroundColor = '';
+                        selectElement.style.color = '';
+                }
+            }
+            
+            // إضافة فئة للنص الغامق
+            if (value !== 'NON') {
+                selectElement.classList.add('colored-select');
+            }
+        }
+
+        // دالة لتطبيق التلوين على جميع خانات الخيارات عند التحميل
+        function applySelectColors() {
+            Object.keys(clients).forEach(nd => {
+                const client = clients[nd];
+                updateSelectColor(nd, 'service', client.service);
+                updateSelectColor(nd, 'acs', client.acs);
+            });
+        }
+
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const search = e.target.value.toLowerCase();
             renderClients(search);
         });
 
-        // Render clients list
         function renderClients(searchTerm = '') {
             const container = document.getElementById('clientsList');
             container.innerHTML = '';
 
             const filteredClients = Object.values(clients).filter(client => 
-                client.nd.toLowerCase().includes(searchTerm)
+                client.nd.toLowerCase().includes(searchTerm) ||
+                (client.nom && client.nom.toLowerCase().includes(searchTerm))
             );
 
             filteredClients.forEach(client => {
                 const card = document.createElement('div');
                 card.className = 'client-card';
                 card.innerHTML = `
-                    <div class="client-header" onclick="toggleClient('${client.nd}')">
-                        <div class="client-nd">ND: ${client.nd}</div>
+                    <div class="client-header" id="header-${client.nd}" onclick="toggleClient('${client.nd}')">
+                        <div class="client-info-container">
+                            <div class="client-nd">ND: ${client.nd}${client.nom ? ' - ' + client.nom : ''}</div>
+                            <div class="client-basic-info">
+                                <div class="service-badge service-${client.service}">${client.service}</div>
+                                <div class="type-badge type-${client.type}">${client.type}</div>
+                            </div>
+                        </div>
                         <div class="client-actions">
                             <button class="btn-icon" onclick="event.stopPropagation(); deleteClient('${client.nd}')" title="Supprimer">🗑️</button>
                         </div>
@@ -134,13 +232,40 @@
                     <div class="client-details" id="details-${client.nd}">
                         <div class="client-form">
                             <div class="form-group">
-                                <label>IVR</label>
-                                <select id="ivr-${client.nd}" onchange="updateClient('${client.nd}', 'ivr', this.value); toggleInjRdv('${client.nd}')">
-                                    <option value="NON" ${client.ivr === 'NON' ? 'selected' : ''}>NON</option>
-                                    <option value="OK" ${client.ivr === 'OK' ? 'selected' : ''}>OK</option>
-                                    <option value="inj" ${client.ivr === 'inj' ? 'selected' : ''}>Injoignable (inj)</option>
-                                    <option value="RDV" ${client.ivr === 'RDV' ? 'selected' : ''}>RDV</option>
-                                </select>
+                                <label>Nom du Client</label>
+                                <input type="text" id="nom-${client.nd}" value="${client.nom || ''}" 
+                                       placeholder="Ex: Mohamed Ali"
+                                       onchange="updateClient('${client.nd}', 'nom', this.value); renderClients()">
+                            </div>
+
+                            <div class="three-col-group">
+                                <div class="form-group">
+                                    <label>Service</label>
+                                    <select id="service-${client.nd}" onchange="updateClient('${client.nd}', 'service', this.value); renderClients()">
+                                        <option value="NON" ${client.service === 'NON' ? 'selected' : ''}>NON</option>
+                                        <option value="MARMAT" ${client.service === 'MARMAT' ? 'selected' : ''}>MARMAT</option>
+                                        <option value="WANA" ${client.service === 'WANA' ? 'selected' : ''}>WANA</option>
+                                        <option value="IAM" ${client.service === 'IAM' ? 'selected' : ''}>IAM</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select id="type-${client.nd}" onchange="updateClient('${client.nd}', 'type', this.value); renderClients()">
+                                        <option value="NON" ${client.type === 'NON' ? 'selected' : ''}>NON</option>
+                                        <option value="GPON" ${client.type === 'GPON' ? 'selected' : ''}>GPON</option>
+                                        <option value="RTC" ${client.type === 'RTC' ? 'selected' : ''}>RTC</option>
+                                        <option value="VOIP" ${client.type === 'VOIP' ? 'selected' : ''}>VOIP</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>IVR</label>
+                                    <select id="ivr-${client.nd}" onchange="updateClient('${client.nd}', 'ivr', this.value); toggleInjRdv('${client.nd}')">
+                                        <option value="NON" ${client.ivr === 'NON' ? 'selected' : ''}>NON</option>
+                                        <option value="OK" ${client.ivr === 'OK' ? 'selected' : ''}>OK</option>
+                                        <option value="inj" ${client.ivr === 'inj' ? 'selected' : ''}>Injoignable (inj)</option>
+                                        <option value="RDV" ${client.ivr === 'RDV' ? 'selected' : ''}>RDV</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div class="form-group ${client.ivr === 'inj' ? '' : 'hidden'}" id="injGroup-${client.nd}">
@@ -239,10 +364,17 @@
                     </div>
                 `;
                 container.appendChild(card);
+                
+                // تطبيق لون رأس العميل بعد إنشاء البطاقة
+                updateClientHeaderColor(client.nd);
             });
+            
+            // تطبيق تلوين خانات الخيارات بعد التصيير
+            setTimeout(() => {
+                applySelectColors();
+            }, 100);
         }
 
-        // Toggle injection/RDV groups based on IVR selection
         function toggleInjRdv(nd) {
             const ivr = document.getElementById(`ivr-${nd}`).value;
             const injGroup = document.getElementById(`injGroup-${nd}`);
@@ -260,5 +392,4 @@
             }
         }
 
-        // Initialiser l'application
         loadClients();
