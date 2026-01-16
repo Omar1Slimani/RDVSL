@@ -106,7 +106,7 @@
 
         /* Page de connexion */
         .login-container {
-            background: var(--white);
+            background:url('back.jpeg');
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -133,7 +133,7 @@
         }
 
         h1 {
-            color: var(--primary-red);
+            color: #ffffff;
             margin-bottom: 10px;
             font-size: 26px;
             font-weight: 700;
@@ -154,7 +154,7 @@
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: var(--black);
+            color: #ffffff;
             font-weight: 500;
             font-size: 14px;
         }
