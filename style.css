@@ -202,14 +202,14 @@
         }
 
         .error-message {
-            color: var(--primary-red);
+            color: #c81010;
             margin-top: 15px;
             display: none;
             font-size: 14px;
             padding: 12px;
-            background: rgba(198, 40, 40, 0.1);
+            background: #e0e0e0;
             border-radius: 6px;
-            border-left: 4px solid var(--primary-red);
+            border-left: 4px solid #212121;
         }
 
         /* Interface utilisateur/admin */
