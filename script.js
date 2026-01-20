@@ -1,11 +1,14 @@
-
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzJZ8bfq4N-g2o4vyzYejtcQwgdM2CCCZZIBwJ4zbGFoIacGm4-QMWK_jcuHXalU5TKwg/exec';
+        
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzH2PMu22HWI3IRxhNozBecTJIa0LXGE3ZFGCsUBrQdr6RXCe3-81AQT2pSmOIJRhpabg/exec';
         
         let currentUser = null;
         let currentRole = null;
         let currentAdminUsers = [];
         let currentData = [];
         let selectedNDForTransfer = null;
+        let isSearchMode = false;
+        let currentSearchTerm = '';
+        let statsCollapsed = true; // حالة الإحصائيات (مطوية افتراضياً)
 
         // Connexion
         async function login() {
@@ -44,10 +47,13 @@
                     const roleBadge = document.getElementById('userRoleBadge');
                     roleBadge.textContent = currentRole === 'admin' ? 'Administrateur' : 'Utilisateur';
                     
+                    // Afficher/masquer la barre de recherche
                     if (currentRole === 'admin') {
-                        document.getElementById('pageTitle').textContent = 'Tableau de Bord Administrateur - ' + currentUser;
+                        document.getElementById('adminSearchBox').style.display = 'flex';
+                        document.getElementById('pageTitle').textContent = `Administrateur - ` + currentUser;
                         await loadAdminUsers();
                     } else {
+                        document.getElementById('adminSearchBox').style.display = 'none';
                         document.getElementById('pageTitle').textContent = `Utilisateur - ${currentUser}`;
                     }
                     
@@ -88,6 +94,11 @@
 
         // Actualiser les données
         async function refreshData() {
+            isSearchMode = false;
+            currentSearchTerm = '';
+            document.getElementById('searchInput').value = '';
+            statsCollapsed = true; // إعادة تعيين حالة الإحصائيات إلى مطوية
+            
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = '<div class="loading">Chargement des données...</div>';
             
@@ -128,6 +139,198 @@
             }
         }
 
+        // دالة البحث عن ND
+        async function searchND() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            
+            if (!searchTerm) {
+                alert('Veuillez entrer un numéro ND à rechercher');
+                return;
+            }
+            
+            isSearchMode = true;
+            currentSearchTerm = searchTerm;
+            statsCollapsed = true; // عند البحث، تبقى الإحصائيات مطوية
+            
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = '<div class="loading">Recherche en cours...</div>';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        action: 'searchND',
+                        searchTerm: searchTerm,
+                        adminUsername: currentUser
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.data.length > 0) {
+                        currentData = result.data;
+                        displaySearchResults(result.data, searchTerm);
+                    } else {
+                        contentArea.innerHTML = `
+                            <div class="no-data">
+                                Aucun résultat trouvé pour "${searchTerm}"
+                                <br><br>
+                                <button class="btn-refresh" onclick="refreshData()" 
+                                        style="margin-top: 10px;">
+                                    Retour à la liste complète
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    contentArea.innerHTML = `
+                        <div class="error-box">
+                            <strong>Erreur de recherche:</strong><br>
+                            ${result.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                contentArea.innerHTML = `
+                    <div class="error-box">
+                        <strong>Erreur de connexion:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+                console.error('Search error:', error);
+            }
+        }
+
+        // عرض نتائج البحث
+        function displaySearchResults(results, searchTerm) {
+            const contentArea = document.getElementById('contentArea');
+            
+            let html = `
+                <div class="search-results-header">
+                    <strong>Résultats de recherche pour: "${searchTerm}"</strong>
+                    <span style="float: right;">
+                        <button class="btn-refresh" onclick="refreshData()">
+                            Retour à la liste complète
+                        </button>
+                    </span>
+                </div>
+                
+                <div style="margin-bottom: 15px; color: var(--gray); font-size: 14px;">
+                    ${results.length} résultat(s) trouvé(s)
+                </div>
+            `;
+            
+            if (results.length === 0) {
+                html += '<div class="no-data">Aucun résultat trouvé</div>';
+            } else {
+                results.forEach((nd, index) => {
+                    const isInProgress = nd.inProgress ? 'in-progress' : '';
+                    const ndTitle = nd.ND ? `ND: ${nd.ND}` : 'ND sans numéro';
+                    
+                    html += `
+                        <div class="nd-item ${isInProgress}">
+                            <div class="nd-header" onclick="toggleSearchND(${index})">
+                                <div>
+                                    <div class="nd-title">${ndTitle}</div>
+                                    <div class="nd-secteur">${nd.Secteur || 'Non spécifié'}</div>
+                                    <div style="font-size: 12px; color: var(--gray); margin-top: 3px;">
+                                        Statut: ${nd.Admin_OK === 'OK' ? 'Confirmé' : 'En attente'}
+                                    </div>
+                                </div>
+                                <div>▼</div>
+                            </div>
+                            <div class="nd-details" id="search-nd-${index}">
+                                ${renderSearchNDDetails(nd, index)}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+    
+            contentArea.innerHTML = html;
+        }
+
+        // عرض تفاصيل ND في نتائج البحث
+        function renderSearchNDDetails(nd, index) {
+            let html = `
+                <div class="section-title">Informations Complètes du Dossier</div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-title">ND</div>
+                        <div class="info-value">${nd.ND || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Statut Admin</div>
+                        <div class="info-value" style="color: ${nd.Admin_OK === 'OK' ? '#2e7d32' : '#c62828'}; 
+                                               font-weight: bold;">
+                            ${nd.Admin_OK === 'OK' ? '✓ Confirmé' : '⏳ En attente'}
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Secteur</div>
+                        <div class="info-value">${nd.Secteur || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Constitution</div>
+                        <div class="info-value">${nd.Constitution || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Client</div>
+                        <div class="info-value">${nd.Client || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Contact Client</div>
+                        <div class="info-value">${nd['Contact client'] || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">IVR</div>
+                        <div class="info-value">${nd.IVR || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Motif</div>
+                        <div class="info-value">${nd.Motif || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Commentaire</div>
+                        <div class="info-value">${nd.Commentaire || 'Aucun'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Date RDV</div>
+                        <div class="info-value">${nd.DateTimeRDV || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Clôturé par</div>
+                        <div class="info-value">${nd.ClosedBy || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Date Clôture</div>
+                        <div class="info-value">${nd.ClosedAt || 'Non spécifié'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">Date Confirmation</div>
+                        <div class="info-value">${nd.Admin_ConfirmDate || 'Non confirmé'}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Si le ND est en attente de confirmation, ajouter le bouton de confirmation
+            if (nd.Admin_OK !== 'OK') {
+                html += `
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn-confirm" onclick="confirmSearchND('${nd.ND}')">
+                            Confirmer ce Dossier
+                        </button>
+                    </div>
+                `;
+            }
+    
+            return html;
+        }
+
         // Afficher les données
         function displayData(data) {
             const contentArea = document.getElementById('contentArea');
@@ -139,9 +342,9 @@
             
             let html = '';
             
-            // Pour les administrateurs: afficher les statistiques des utilisateurs
-            if (currentRole === 'admin' && currentAdminUsers.length > 0) {
-                html += renderUsersStatistics();
+            // Pour les administrateurs: afficher الإحصائيات القابلة للطي
+            if (currentRole === 'admin' && currentAdminUsers.length > 0 && !isSearchMode) {
+                html += renderCollapsibleStatistics();
             }
             
             // Afficher les ND
@@ -168,30 +371,35 @@
             contentArea.innerHTML = html;
         }
 
-        // Afficher les statistiques des utilisateurs (pour admin)
-        function renderUsersStatistics() {
+        // Afficher les statistiques des utilisateurs (pour admin) بشكل قابل للطي
+        function renderCollapsibleStatistics() {
+            const isOpen = !statsCollapsed;
+            const iconClass = isOpen ? 'stats-collapsible-icon open' : 'stats-collapsible-icon';
+            
             let html = `
-                <div class="users-stats">
-                    <div class="stats-title">
-                        <span>Statistiques des Utilisateurs</span>
+                <div class="stats-collapsible">
+                    <div class="stats-collapsible-header" onclick="toggleStats()">
+                        <h3>Statistiques des Utilisateurs</h3>
+                        <div class="${iconClass}">▼</div>
                     </div>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">${currentAdminUsers.length}</div>
-                            <div class="stat-label">Utilisateurs Actifs</div>
+                    <div class="stats-collapsible-content ${isOpen ? 'open' : ''}" id="statsContent">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">${currentAdminUsers.length}</div>
+                                <div class="stat-label">Utilisateurs Actifs</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${currentData.length}</div>
+                                <div class="stat-label">Dossiers Totaux</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${currentData.filter(nd => nd.inProgress).length}</div>
+                                <div class="stat-label">En Attente</div>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${currentData.length}</div>
-                            <div class="stat-label">Dossiers Totaux</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${currentData.filter(nd => nd.inProgress).length}</div>
-                            <div class="stat-label">En Attente</div>
-                        </div>
-                    </div>
-                    
-                    <div class="section-title" style="margin-top: 20px;">Utilisateurs du Secteur</div>
-                    <div class="users-list">
+                        
+                        <div class="section-title" style="margin-top: 20px;">Utilisateurs du Secteur</div>
+                        <div class="users-list">
             `;
             
             currentAdminUsers.forEach(user => {
@@ -205,11 +413,32 @@
             });
             
             html += `
+                        </div>
                     </div>
                 </div>
             `;
             
             return html;
+        }
+
+        // دالة لفتح/غلق الإحصائيات
+        function toggleStats() {
+            statsCollapsed = !statsCollapsed;
+            const statsContent = document.getElementById('statsContent');
+            const statsIcon = document.querySelector('.stats-collapsible-icon');
+            
+            if (statsContent) {
+                if (statsCollapsed) {
+                    statsContent.classList.remove('open');
+                    statsIcon.classList.remove('open');
+                } else {
+                    statsContent.classList.add('open');
+                    statsIcon.classList.add('open');
+                }
+            } else {
+                // إذا لم يكن العنصر موجوداً بعد، أعد عرض البيانات
+                displayData(currentData);
+            }
         }
 
         // Afficher les détails ND
@@ -354,6 +583,12 @@
             details.classList.toggle('open');
         }
 
+        // Ouvrir/fermer les détails dans les résultats de recherche
+        function toggleSearchND(index) {
+            const details = document.getElementById(`search-nd-${index}`);
+            details.classList.toggle('open');
+        }
+
         // Gérer le changement IVR
         function handleIVRChange(index) {
             const select = document.getElementById(`ivr-${index}`);
@@ -468,6 +703,39 @@
             }
         }
 
+        // Confirmer ND depuis les résultats de recherche
+        async function confirmSearchND(ndNumber) {
+            if (!confirm(`Êtes-vous sûr de vouloir confirmer définitivement le dossier ${ndNumber}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        action: 'confirmND',
+                        nd: ndNumber
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Dossier confirmé avec succès');
+                    // Refaire la recherche pour mettre à jour l'affichage
+                    searchND();
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                alert('Erreur de connexion: ' + error.message);
+                console.error('Confirm search ND error:', error);
+            }
+        }
+
         // Ouvrir la modal de transfert
         function openTransferModal(index) {
             selectedNDForTransfer = currentData[index];
@@ -569,6 +837,12 @@
                 currentAdminUsers = [];
                 currentData = [];
                 selectedNDForTransfer = null;
+                isSearchMode = false;
+                currentSearchTerm = '';
+                statsCollapsed = true;
+                
+                // إخفاء مربع البحث
+                document.getElementById('adminSearchBox').style.display = 'none';
                 
                 document.getElementById('mainPage').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'block';
@@ -578,11 +852,18 @@
             }
         }
 
-        // Permettre la connexion avec Enter
+        // Permettre la connexion مع Enter
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('password').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     login();
+                }
+            });
+            
+            // Permettre البحث مع Enter
+            document.getElementById('searchInput')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchND();
                 }
             });
             
@@ -594,3 +875,4 @@
                 }
             }
         });
+

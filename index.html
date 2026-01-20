@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDVSL</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="shortcut icon" href="icon.png" type="image/x-icon">
@@ -12,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- FileSaver.js لتصدير الملفات -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Page de connexion -->
@@ -44,8 +44,15 @@
             <h2 id="pageTitle">Chargement...</h2>
             <div class="user-info">
                 <div class="user-badge" id="userRoleBadge"></div>
-                <button class="btn-logout" onclick="logout()">Déconnexion</button>
+                
+                <!-- مربع البحث (يظهر فقط للمسؤولين) -->
+                <div id="adminSearchBox" style="display: none;" class="search-box">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Rechercher ND...">
+                    <button class="btn-search" onclick="searchND()">Recherche</button>
+                </div>
+                
                 <button class="btn-refresh" onclick="refreshData()">Actualiser</button>
+                <button class="btn-logout" onclick="logout()">Déconnexion</button>
             </div>
         </div>
         
